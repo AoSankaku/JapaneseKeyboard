@@ -332,6 +332,7 @@ class KeyboardSettingFragment : Fragment() {
     private fun setupResizeHandles() {
         var initialY = 0f
         var initialHeight = 0
+        var initialBottomMargin = 0
         var initialX = 0f
         var initialWidth = 0
 
@@ -339,8 +340,8 @@ class KeyboardSettingFragment : Fragment() {
         val screenWidth = WindowMetricsCalculator.getOrCreate()
             .computeCurrentWindowMetrics(requireActivity()).bounds.width()
 
-        val minHeightPx = minHeightDp * density
-        val maxHeightPx = maxHeightDp * density
+        val minHeightPx = (minHeightDp * density).roundToInt()
+        val maxHeightPx = (maxHeightDp * density).roundToInt()
         val minWidthPx = screenWidth * (minWidthPercent / 100f)
 
         fun saveHeightPreference() {
@@ -352,6 +353,21 @@ class KeyboardSettingFragment : Fragment() {
                 appPreference.qwerty_keyboard_height = finalHeightDp
             }
             Timber.d("Saved Height for page $currentPage: $finalHeightDp dp")
+        }
+
+        fun saveBottomMarginPreference() {
+            val layoutParams =
+                binding.keyboardContainer.layoutParams as ConstraintLayout.LayoutParams
+            val finalBottomMarginDp = (layoutParams.bottomMargin / density).roundToInt()
+            val currentPage = binding.keyboardViewPager.currentItem
+            if (currentPage == KeyboardViewPagerAdapter.TEN_KEY_PAGE_POSITION) {
+                appPreference.keyboard_vertical_margin_bottom = finalBottomMarginDp
+            } else {
+                appPreference.qwerty_keyboard_vertical_margin_bottom = finalBottomMarginDp
+            }
+            Timber.d(
+                "Saved bottom margin for page $currentPage: $finalBottomMarginDp dp"
+            )
         }
 
         fun saveWidthPreference() {
@@ -386,8 +402,10 @@ class KeyboardSettingFragment : Fragment() {
 
                 MotionEvent.ACTION_MOVE -> {
                     val deltaY = event.rawY - initialY
-                    val newHeight = (initialHeight - deltaY).coerceIn(minHeightPx, maxHeightPx)
-                    binding.keyboardContainer.layoutParams.height = newHeight.toInt()
+                    val newHeight = (initialHeight - deltaY)
+                        .toInt()
+                        .coerceIn(minHeightPx, maxHeightPx)
+                    binding.keyboardContainer.layoutParams.height = newHeight
                     binding.keyboardContainer.requestLayout()
                 }
 
@@ -401,16 +419,32 @@ class KeyboardSettingFragment : Fragment() {
                 MotionEvent.ACTION_DOWN -> {
                     initialY = event.rawY
                     initialHeight = binding.keyboardContainer.height
+                    initialBottomMargin =
+                        (binding.keyboardContainer.layoutParams as ConstraintLayout.LayoutParams)
+                            .bottomMargin
                 }
 
                 MotionEvent.ACTION_MOVE -> {
                     val deltaY = event.rawY - initialY
-                    val newHeight = (initialHeight + deltaY).coerceIn(minHeightPx, maxHeightPx)
-                    binding.keyboardContainer.layoutParams.height = newHeight.toInt()
+                    val resize = KeyboardVerticalResize.fromBottomHandle(
+                        initialHeightPx = initialHeight,
+                        initialBottomMarginPx = initialBottomMargin,
+                        dragDeltaYPx = deltaY,
+                        minHeightPx = minHeightPx,
+                        maxHeightPx = maxHeightPx
+                    )
+                    val layoutParams =
+                        binding.keyboardContainer.layoutParams as ConstraintLayout.LayoutParams
+                    layoutParams.height = resize.heightPx
+                    layoutParams.bottomMargin = resize.bottomMarginPx
+                    binding.keyboardContainer.layoutParams = layoutParams
                     binding.keyboardContainer.requestLayout()
                 }
 
-                MotionEvent.ACTION_UP -> saveHeightPreference()
+                MotionEvent.ACTION_UP -> {
+                    saveHeightPreference()
+                    saveBottomMarginPreference()
+                }
             }
             true
         }
