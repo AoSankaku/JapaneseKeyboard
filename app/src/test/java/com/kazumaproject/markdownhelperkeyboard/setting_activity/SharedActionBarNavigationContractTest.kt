@@ -95,6 +95,48 @@ class SharedActionBarNavigationContractTest {
         }
     }
 
+    @Test
+    fun settingManagementDestinationsAreNotTreatedAsTopLevelDestinations() {
+        val mainActivity = mainFile("MainActivity.kt").readText()
+        val settingDestinations = mainFile("ui/setting/SettingDestination.kt").readText()
+        val appBarConfiguration = mainActivity
+            .substringAfter("val appBarConfiguration = AppBarConfiguration(")
+            .substringBefore("setupActionBarWithNavController")
+        val managementDestinations = settingDestinations
+            .substringAfter("fun management(context: Context)")
+            .substringBefore("fun all(context: Context)")
+            .let { block ->
+                Regex("""destinationId\s*=\s*R\.id\.([A-Za-z0-9_]+)""")
+                    .findAll(block)
+                    .map { it.groupValues[1] }
+                    .toSet()
+            }
+        val topLevelManagementDestinations = managementDestinations.filter { destinationId ->
+            appBarConfiguration.contains("R.id.$destinationId")
+        }
+
+        assertTrue(
+            "Management screens opened from Settings must retain Up navigation: " +
+                topLevelManagementDestinations,
+            topLevelManagementDestinations.isEmpty(),
+        )
+    }
+
+    @Test
+    fun fragmentsNeverDisableTheSharedUpIndicator() {
+        val sourceRoot = projectFile("app/src/main/java", "src/main/java")
+        val offenders = sourceRoot.walkTopDown()
+            .filter { it.isFile && it.extension == "kt" }
+            .filter { file -> file.readText().contains("setDisplayHomeAsUpEnabled(false)") }
+            .map { it.relativeTo(sourceRoot).invariantSeparatorsPath }
+            .toList()
+
+        assertTrue(
+            "NavigationUI owns the shared Up indicator; fragments disabling it: $offenders",
+            offenders.isEmpty(),
+        )
+    }
+
     private fun mainFile(relativePath: String): File {
         val sourcePath = "java/com/kazumaproject/markdownhelperkeyboard/setting_activity/$relativePath"
         return projectFile("app/src/main/$sourcePath", "src/main/$sourcePath")

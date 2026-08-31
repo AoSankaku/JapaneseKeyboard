@@ -69,8 +69,6 @@ class MainActivity : AppCompatActivity() {
             setOf(
                 R.id.navigation_setting,
                 R.id.settingMainFragment,
-                R.id.navigation_learn_dictionary,
-                R.id.navigation_user_dictionary,
             )
         )
         setupActionBarWithNavController(navController, appBarConfiguration)
