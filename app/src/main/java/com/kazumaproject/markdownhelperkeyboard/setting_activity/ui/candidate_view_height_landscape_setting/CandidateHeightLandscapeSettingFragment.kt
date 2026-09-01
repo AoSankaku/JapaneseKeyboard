@@ -967,6 +967,7 @@ class CandidateHeightLandscapeSettingFragment : Fragment() {
             views = CandidateKeyboardPreviewViews(
                 container = binding.keyboardPreviewContainer,
                 tenKey = binding.candidateHeightSettingTenkeyPreview,
+                gojuon = binding.candidateHeightSettingGojuonPreview,
                 qwerty = binding.candidateHeightSettingQwertyPreview,
                 flick = binding.candidateHeightSettingFlickPreview
             ),
